@@ -1,0 +1,505 @@
+{
+  "address": "GJBWK2HdEyyQaxNvbjw3TXWEXZXbNz6oYhNKUtj7SvBD",
+  "metadata": {
+    "name": "lp_escrow",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "batch_update_data",
+      "docs": [
+        "Batch update both holder count and volume (gas efficient)"
+      ],
+      "discriminator": [
+        102,
+        47,
+        141,
+        221,
+        158,
+        86,
+        58,
+        24
+      ],
+      "accounts": [
+        {
+          "name": "lock_info",
+          "writable": true
+        },
+        {
+          "name": "oracle_signer",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_holder_count",
+          "type": "u64"
+        },
+        {
+          "name": "holder_data_timestamp",
+          "type": "i64"
+        },
+        {
+          "name": "volume_to_add_cents",
+          "type": "u64"
+        },
+        {
+          "name": "volume_price_timestamp",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "check_unlock_conditions",
+      "docs": [
+        "Check if unlock conditions are met"
+      ],
+      "discriminator": [
+        104,
+        249,
+        33,
+        140,
+        131,
+        164,
+        187,
+        94
+      ],
+      "accounts": [
+        {
+          "name": "lock_info",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_lock",
+      "discriminator": [
+        182,
+        214,
+        195,
+        105,
+        58,
+        73,
+        81,
+        124
+      ],
+      "accounts": [
+        {
+          "name": "lock_info",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "from_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "lock_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  99,
+                  107,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "token_mint",
+          "type": "pubkey"
+        },
+        {
+          "name": "lock_amount",
+          "type": "u64"
+        },
+        {
+          "name": "holder_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "volume_threshold_usd",
+          "type": "u64"
+        },
+        {
+          "name": "oracle_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "record_trade_volume",
+      "docs": [
+        "Record trade volume with offchain price validation"
+      ],
+      "discriminator": [
+        237,
+        170,
+        28,
+        252,
+        105,
+        78,
+        85,
+        206
+      ],
+      "accounts": [
+        {
+          "name": "lock_info",
+          "writable": true
+        },
+        {
+          "name": "oracle_signer",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "token_amount",
+          "type": "u64"
+        },
+        {
+          "name": "usd_value_cents",
+          "type": "u64"
+        },
+        {
+          "name": "price_timestamp",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "test_force_conditions",
+      "discriminator": [
+        218,
+        228,
+        155,
+        147,
+        48,
+        245,
+        163,
+        199
+      ],
+      "accounts": [
+        {
+          "name": "lock_info",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "unlock_tokens",
+      "docs": [
+        "Unlock tokens once conditions are met"
+      ],
+      "discriminator": [
+        233,
+        35,
+        95,
+        159,
+        37,
+        185,
+        47,
+        88
+      ],
+      "accounts": [
+        {
+          "name": "lock_info",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "lock_info.token_mint",
+                "account": "LockInfo"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "lock_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  99,
+                  107,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "lock_info.token_mint",
+                "account": "LockInfo"
+              }
+            ]
+          }
+        },
+        {
+          "name": "to_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_holder_count",
+      "docs": [
+        "Called by authorized oracle to update holder count with offchain validation"
+      ],
+      "discriminator": [
+        137,
+        22,
+        159,
+        24,
+        209,
+        5,
+        24,
+        16
+      ],
+      "accounts": [
+        {
+          "name": "lock_info",
+          "writable": true
+        },
+        {
+          "name": "oracle_signer",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_holder_count",
+          "type": "u64"
+        },
+        {
+          "name": "data_timestamp",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "update_oracle_authority",
+      "docs": [
+        "Emergency update oracle authority (multi-sig recommended)"
+      ],
+      "discriminator": [
+        69,
+        65,
+        130,
+        209,
+        32,
+        196,
+        23,
+        43
+      ],
+      "accounts": [
+        {
+          "name": "lock_info",
+          "writable": true
+        },
+        {
+          "name": "current_authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_oracle_authority",
+          "type": "pubkey"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "LockInfo",
+      "discriminator": [
+        108,
+        1,
+        45,
+        88,
+        70,
+        227,
+        43,
+        220
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ConditionsNotMet",
+      "msg": "Unlock conditions not yet met"
+    },
+    {
+      "code": 6001,
+      "name": "Unauthorized",
+      "msg": "Unauthorized access"
+    },
+    {
+      "code": 6002,
+      "name": "UnauthorizedOracle",
+      "msg": "Unauthorized oracle"
+    },
+    {
+      "code": 6003,
+      "name": "StaleHolderData",
+      "msg": "Holder count data is stale"
+    },
+    {
+      "code": 6004,
+      "name": "StalePriceData",
+      "msg": "Price data is stale"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidTradeValue",
+      "msg": "Invalid trade value"
+    }
+  ],
+  "types": [
+    {
+      "name": "LockInfo",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "locked_amount",
+            "type": "u64"
+          },
+          {
+            "name": "holder_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "volume_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "oracle_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "unlockable",
+            "type": "bool"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "conditions_met_at",
+            "type": "i64"
+          },
+          {
+            "name": "total_volume_usd",
+            "type": "u64"
+          },
+          {
+            "name": "current_holder_count",
+            "type": "u64"
+          },
+          {
+            "name": "holder_data_updated_at",
+            "type": "i64"
+          }
+        ]
+      }
+    }
+  ]
+}
