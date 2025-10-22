@@ -2,7 +2,9 @@
 // Combined service that:
 // 1. Listens for migration threshold events
 // 2. Auto-migrates tokens to Raydium
-// 3. Monitors creator token locks and unlocks (burns) them when conditions are met
+// 3. Burns LP tokens for permanent liquidity lock
+// 4. Buys and burns NOOT tokens with platform fee
+// 5. Monitors first buyer token locks and unlocks them when conditions are met
 
 import { Connection, PublicKey, Keypair, Transaction, SystemProgram } from '@solana/web3.js';
 import pkg from '@coral-xyz/anchor';
@@ -13,6 +15,7 @@ import {
     createAssociatedTokenAccountIdempotentInstruction,
     getMint,
     TOKEN_PROGRAM_ID,
+    createBurnInstruction,
 } from '@solana/spl-token';
 import bs58 from 'bs58';
 import {
@@ -25,6 +28,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import fetch from 'node-fetch';
+import { swapAndBurnNoot } from './swap-and-burn.js';
 
 dotenv.config();
 
@@ -91,13 +95,13 @@ class UnifiedMigrationUnlockService {
         this.unlockMonitoringInterval = null;
 
         console.log('🤖 Unified Migration & Unlock Service Initialized');
-        console.log(`   Bot Address: ${this.botWallet.publicKey.toString()}`);
-        console.log(`   RPC URL: ${CONFIG.RPC_URL}`);
-        console.log(`   Cluster: ${CONFIG.CLUSTER}`);
+        console.log(`   Bot Address: ${this.botWallet.publicKey.toString()} `);
+        console.log(`   RPC URL: ${CONFIG.RPC_URL} `);
+        console.log(`   Cluster: ${CONFIG.CLUSTER} `);
     }
 
     explorerUrl(tx) {
-        const cluster = CONFIG.CLUSTER === 'mainnet-beta' ? '' : `?cluster=${CONFIG.CLUSTER}`;
+        const cluster = CONFIG.CLUSTER === 'mainnet-beta' ? '' : `? cluster = ${CONFIG.CLUSTER} `;
         return `https://explorer.solana.com/tx/${tx}${cluster}`;
     }
 
@@ -134,8 +138,8 @@ class UnifiedMigrationUnlockService {
 
             if (!tx) return null;
 
-            const accountKeys = tx.transaction.message.staticAccountKeys || 
-                               tx.transaction.message.accountKeys;
+            const accountKeys = tx.transaction.message.staticAccountKeys ||
+                tx.transaction.message.accountKeys;
 
             for (const key of accountKeys) {
                 try {
@@ -151,6 +155,75 @@ class UnifiedMigrationUnlockService {
             console.error('Error extracting token mint:', error.message);
         }
         return null;
+    }
+
+    async burnLPTokens(lpMint, lpTokenAccount, retries = 3) {
+        try {
+            console.log('\n🔥 Burning LP tokens for permanent liquidity lock...');
+
+            const lpMintPubkey = new PublicKey(lpMint);
+            const lpTokenAccountPubkey = new PublicKey(lpTokenAccount);
+
+            // Retry logic with delays
+            let lpAmount = '0';
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const tokenBalance = await this.connection.getTokenAccountBalance(lpTokenAccountPubkey);
+                    lpAmount = tokenBalance.value.amount;
+
+                    if (lpAmount !== '0') {
+                        break; // Found balance, exit retry loop
+                    }
+
+                    console.log(`   ⏳ Attempt ${i + 1}/${retries}: No LP tokens yet, waiting...`);
+                    await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    console.log(`   ⏳ Attempt ${i + 1}/${retries}: Account not found, waiting...`);
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+            }
+
+            if (lpAmount === '0') {
+                console.log('⚠️ No LP tokens to burn after retries');
+                return null;
+            }
+
+            console.log(`   LP tokens to burn: ${parseFloat(lpAmount) / 1e9}`);
+
+            // Create burn instruction
+            const burnInstruction = createBurnInstruction(
+                lpTokenAccountPubkey,
+                lpMintPubkey,
+                this.botWallet.publicKey,
+                BigInt(lpAmount),
+                [],
+                TOKEN_PROGRAM_ID
+            );
+
+            const burnTransaction = new Transaction().add(burnInstruction);
+            const { blockhash } = await this.connection.getLatestBlockhash();
+            burnTransaction.recentBlockhash = blockhash;
+            burnTransaction.feePayer = this.botWallet.publicKey;
+
+            burnTransaction.sign(this.botWallet);
+
+            const burnTxid = await this.connection.sendRawTransaction(burnTransaction.serialize(), {
+                skipPreflight: false,
+                maxRetries: 2
+            });
+
+            await this.connection.confirmTransaction(burnTxid, 'confirmed');
+
+            console.log(`✅ LP tokens burned: ${this.explorerUrl(burnTxid)}`);
+            console.log(`   🔒 Liquidity is now PERMANENTLY LOCKED!`);
+
+            return burnTxid;
+
+        } catch (error) {
+            console.error('❌ LP burn failed:', error.message);
+            return null;
+        }
     }
 
     async autoMigrateToRaydium(mint) {
@@ -197,6 +270,12 @@ class UnifiedMigrationUnlockService {
             console.log("✅ Migration prepared:", this.explorerUrl(sig));
 
             const updatedCurveData = await this.program.account.bondingCurve.fetch(bondingCurve);
+
+            // Calculate platform fee (3% of total SOL)
+            const totalSol = updatedCurveData.migrationSol;
+            const platformFee = Math.floor((totalSol * 3) / 100);
+
+            console.log(`\n💰 Platform fee collected: ${platformFee / 1e9} SOL`);
 
             // Step 2: Withdraw tokens and SOL
             console.log("\n📋 Step 2: Withdrawing tokens and SOL for pool...");
@@ -295,9 +374,50 @@ class UnifiedMigrationUnlockService {
             console.log("✅ Raydium Pool Created:", this.explorerUrl(poolTx.txId));
             console.log(`   LP Mint: ${extInfo.address.lpMint}`);
 
+            // Step 4: Burn LP Tokens
+            console.log("\n📋 Step 4: Burning LP tokens...");
+
+            const lpTokenAccount = await getAssociatedTokenAddress(
+                new PublicKey(extInfo.address.lpMint),
+                this.botWallet.publicKey,
+                false,
+                TOKEN_PROGRAM_ID
+            );
+
+            const burnLpTxid = await this.burnLPTokens(
+                extInfo.address.lpMint,
+                lpTokenAccount,
+                5
+            );
+
+            // Step 5: Buy and Burn NOOT tokens with platform fee
+            console.log("\n📋 Step 5: Buying and burning NOOT tokens...");
+
+            let burnResult = null;
+            if (CONFIG.CLUSTER === 'mainnet-beta' && platformFee > 0) {
+                burnResult = await swapAndBurnNoot(
+                    this.connection,
+                    this.botWallet,
+                    platformFee
+                );
+
+                if (burnResult.success) {
+                    console.log(`✅ NOOT Buy & Burn Complete:`);
+                    console.log(`   Swap TX: ${this.explorerUrl(burnResult.swapTxid)}`);
+                    console.log(`   Burn TX: ${this.explorerUrl(burnResult.burnTxid)}`);
+                    console.log(`   Burned: ${burnResult.burnedAmountFormatted} NOOT`);
+                } else {
+                    console.error(`⚠️ NOOT burn failed: ${burnResult.error}`);
+                    console.log(`   Migration still successful, but burn failed`);
+                }
+            } else {
+                console.log(`⚠️ Skipping NOOT burn (devnet or no fee collected)`);
+            }
+
             console.log(`\n${'='.repeat(60)}`);
             console.log(`✅ MIGRATION COMPLETE FOR ${mintStr}`);
-            console.log(`   Creator tokens remain locked until conditions met`);
+            console.log(`   LP tokens burned = Liquidity locked forever ✅`);
+            console.log(`   First buyer tokens remain locked until conditions met`);
             console.log(`${'='.repeat(60)}\n`);
 
             return {
@@ -306,6 +426,9 @@ class UnifiedMigrationUnlockService {
                 withdrawTxid: sig1,
                 poolTxid: poolTx.txId,
                 lpMint: extInfo.address.lpMint,
+                burnLpTxid: burnLpTxid,
+                platformFee: platformFee,
+                burnResult: burnResult,
             };
 
         } catch (error) {
@@ -317,7 +440,8 @@ class UnifiedMigrationUnlockService {
     }
 
     // ==================== UNLOCK MONITORING SECTION ====================
-    addTokenToMonitoring(tokenMint, lockInfo) {
+
+    addTokenToMonitoring(tokenMint, bondingCurve) {
         const tokenMintStr = tokenMint.toString();
 
         if (this.lockedTokens.has(tokenMintStr)) {
@@ -326,14 +450,14 @@ class UnifiedMigrationUnlockService {
 
         const tokenInfo = {
             tokenMint: tokenMint,
-            lockInfo: lockInfo,
+            bondingCurve: bondingCurve,
             addedAt: Date.now(),
         };
 
         this.lockedTokens.set(tokenMintStr, tokenInfo);
         console.log(`\n🔒 Added to unlock monitoring: ${tokenMintStr.slice(0, 8)}...`);
-        console.log(`   Lock Info: ${lockInfo.toString().slice(0, 8)}...`);
-        
+        console.log(`   Bonding Curve: ${bondingCurve.toString().slice(0, 8)}...`);
+
         return true;
     }
 
@@ -390,7 +514,7 @@ class UnifiedMigrationUnlockService {
                     new BN(currentTime)
                 )
                 .accounts({
-                    lockInfo: tokenInfo.lockInfo,
+                    bondingCurve: tokenInfo.bondingCurve,
                     oracleAuthority: this.botWallet.publicKey,
                 })
                 .instruction();
@@ -413,21 +537,21 @@ class UnifiedMigrationUnlockService {
             const instruction = await this.program.methods
                 .checkUnlockConditions()
                 .accounts({
-                    lockInfo: tokenInfo.lockInfo,
+                    bondingCurve: tokenInfo.bondingCurve,
                 })
                 .instruction();
 
             const transaction = new Transaction().add(instruction);
             await this.sendAndConfirmTransaction(transaction, [this.botWallet]);
 
-            const lockInfoData = await this.program.account.lockInfo.fetch(tokenInfo.lockInfo);
+            const bondingCurveData = await this.program.account.bondingCurve.fetch(tokenInfo.bondingCurve);
 
             return {
-                unlockable: lockInfoData.unlockable,
-                currentHolders: lockInfoData.currentHolderCount.toNumber(),
-                requiredHolders: lockInfoData.holderThreshold.toNumber(),
-                currentVolume: lockInfoData.totalVolumeUsd.toNumber(),
-                requiredVolume: lockInfoData.volumeThreshold.toNumber(),
+                unlockable: bondingCurveData.unlockable,
+                currentHolders: bondingCurveData.currentHolderCount.toNumber(),
+                requiredHolders: bondingCurveData.holderThreshold.toNumber(),
+                currentVolume: bondingCurveData.totalVolumeUsd.toNumber(),
+                requiredVolume: bondingCurveData.volumeThreshold.toNumber(),
             };
         } catch (error) {
             console.error(`❌ Check conditions failed:`, error.message);
@@ -441,45 +565,65 @@ class UnifiedMigrationUnlockService {
         }
     }
 
-    async unlockCreatorTokens(tokenInfo) {
+    async unlockFirstBuyerTokens(tokenInfo) {
         try {
-            const [bondingCurve] = PublicKey.findProgramAddressSync(
-                [Buffer.from("bonding_curve"), tokenInfo.tokenMint.toBuffer()],
-                CONFIG.BONDING_CURVE_PROGRAM_ID
-            );
+            const bondingCurveData = await this.program.account.bondingCurve.fetch(tokenInfo.bondingCurve);
+            const firstBuyer = bondingCurveData.firstBuyer;
 
-            const [creatorLockVault] = PublicKey.findProgramAddressSync(
-                [Buffer.from("creator_lock_vault"), tokenInfo.tokenMint.toBuffer()],
+            if (!firstBuyer) {
+                throw new Error('No first buyer found');
+            }
+
+            const [firstBuyerLockVault] = PublicKey.findProgramAddressSync(
+                [Buffer.from("first_buyer_lock_vault"), tokenInfo.tokenMint.toBuffer()],
                 CONFIG.BONDING_CURVE_PROGRAM_ID
             );
 
             const mintInfo = await getMint(this.connection, tokenInfo.tokenMint);
             const tokenProgramId = mintInfo.tlvData.length > 0 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
 
+            // Get first buyer's token account (create if needed)
+            const firstBuyerTokenAccount = await getAssociatedTokenAddress(
+                tokenInfo.tokenMint,
+                firstBuyer,
+                false,
+                tokenProgramId
+            );
+
+            // Create ATA instruction if needed
+            const createAtaIx = createAssociatedTokenAccountIdempotentInstruction(
+                this.botWallet.publicKey,
+                firstBuyerTokenAccount,
+                firstBuyer,
+                tokenInfo.tokenMint,
+                tokenProgramId
+            );
+
             const instruction = await this.program.methods
-                .unlockCreatorTokens()
+                .unlockFirstBuyerTokens()
                 .accounts({
-                    bondingCurve,
-                    lockInfo: tokenInfo.lockInfo,
-                    creatorLockVault,
+                    bondingCurve: tokenInfo.bondingCurve,
+                    firstBuyerLockVault,
+                    firstBuyerTokenAccount,
                     tokenMint: tokenInfo.tokenMint,
-                    authority: this.botWallet.publicKey,
+                    firstBuyer: this.botWallet.publicKey, // Bot calls it on behalf
                     tokenProgram: tokenProgramId,
                 })
                 .instruction();
 
-            const transaction = new Transaction().add(instruction);
+            const transaction = new Transaction().add(createAtaIx, instruction);
             const signature = await this.sendAndConfirmTransaction(
                 transaction,
                 [this.botWallet]
             );
 
-            console.log(`🔥 CREATOR TOKENS BURNED for ${tokenInfo.tokenMint.toString().slice(0, 8)}...`);
+            console.log(`🔓 FIRST BUYER TOKENS RELEASED for ${tokenInfo.tokenMint.toString().slice(0, 8)}...`);
+            console.log(`   Tokens returned to: ${firstBuyer.toString().slice(0, 8)}...`);
             console.log(`   Transaction: ${this.explorerUrl(signature)}`);
 
             return signature;
         } catch (error) {
-            console.error(`❌ Unlock/burn failed:`, error.message);
+            console.error(`❌ Unlock/release failed:`, error.message);
             throw error;
         }
     }
@@ -501,8 +645,8 @@ class UnifiedMigrationUnlockService {
             const conditionCheck = await this.checkUnlockConditions(tokenInfo);
 
             if (conditionCheck.unlockable) {
-                console.log(`🎉 CONDITIONS MET - BURNING LOCKED TOKENS FOR ${tokenMintStr.slice(0, 8)}...`);
-                await this.unlockCreatorTokens(tokenInfo);
+                console.log(`🎉 CONDITIONS MET - RELEASING LOCKED TOKENS FOR ${tokenMintStr.slice(0, 8)}...`);
+                await this.unlockFirstBuyerTokens(tokenInfo);
                 this.lockedTokens.delete(tokenMintStr);
                 return { status: 'unlocked' };
             }
@@ -568,7 +712,7 @@ class UnifiedMigrationUnlockService {
             async (logInfo) => {
                 if (this.processedSignatures.has(logInfo.signature)) return;
 
-                const hasMigrationEvent = logInfo.logs.some(log => 
+                const hasMigrationEvent = logInfo.logs.some(log =>
                     log.includes('Migration threshold reached')
                 );
 
@@ -581,9 +725,8 @@ class UnifiedMigrationUnlockService {
                     const tokenMint = await this.extractTokenMintFromLogs(logInfo.signature);
 
                     if (tokenMint) {
-                        console.log(`   Token Mint: ${tokenMint.toString()}`);
+                        console.log(`Token Mint: ${tokenMint.toString()}`);
                         await new Promise(resolve => setTimeout(resolve, 3000));
-
                         try {
                             await this.autoMigrateToRaydium(tokenMint);
                         } catch (error) {
@@ -600,18 +743,18 @@ class UnifiedMigrationUnlockService {
         console.log(`✅ Migration listener active`);
         console.log(`   Monitoring program: ${CONFIG.BONDING_CURVE_PROGRAM_ID.toString()}`);
 
-        // Listen for TokensLocked events (when tokens are created with lock)
+        // Listen for FirstBuyerLocked events
         this.lockEventSubscriptionId = this.connection.onLogs(
             CONFIG.BONDING_CURVE_PROGRAM_ID,
             async (logInfo) => {
                 if (this.processedSignatures.has(logInfo.signature + '_lock')) return;
 
-                const hasLockEvent = logInfo.logs.some(log => 
-                    log.includes('Locked') && log.includes('tokens')
+                const hasLockEvent = logInfo.logs.some(log =>
+                    log.includes('FIRST BUY DETECTED - Locking')
                 );
 
                 if (hasLockEvent && !logInfo.err) {
-                    console.log(`\n🔒 TOKEN LOCK DETECTED!`);
+                    console.log(`\n🔒 FIRST BUYER LOCK DETECTED!`);
                     console.log(`   Signature: ${logInfo.signature}`);
 
                     this.processedSignatures.add(logInfo.signature + '_lock');
@@ -619,19 +762,19 @@ class UnifiedMigrationUnlockService {
                     const tokenMint = await this.extractTokenMintFromLogs(logInfo.signature);
 
                     if (tokenMint) {
-                        const [lockInfo] = PublicKey.findProgramAddressSync(
-                            [Buffer.from("lock_info"), tokenMint.toBuffer()],
+                        const [bondingCurve] = PublicKey.findProgramAddressSync(
+                            [Buffer.from("bonding_curve"), tokenMint.toBuffer()],
                             CONFIG.BONDING_CURVE_PROGRAM_ID
                         );
 
-                        this.addTokenToMonitoring(tokenMint, lockInfo);
+                        this.addTokenToMonitoring(tokenMint, bondingCurve);
                     }
                 }
             },
             'confirmed'
         );
 
-        console.log(`✅ Lock event listener active`);
+        console.log(`✅ First buyer lock listener active`);
 
         // Start unlock monitoring interval
         this.unlockMonitoringInterval = setInterval(async () => {
@@ -671,13 +814,11 @@ class UnifiedMigrationUnlockService {
         console.log('🛑 Service stopped');
     }
 }
-
 // Main execution
 async function main() {
     try {
         const service = new UnifiedMigrationUnlockService();
         await service.start();
-
         // Graceful shutdown
         process.on('SIGINT', () => {
             console.log('\n\n📴 Shutting down gracefully...');
