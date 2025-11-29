@@ -1,0 +1,1337 @@
+{
+  "address": "CPMWvEXzNTnrksm1PPXQzp2UUTXWxCKQaw9HhvDdf3nT",
+  "metadata": {
+    "name": "bonding_curve",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "batch_update_data",
+      "docs": [
+        "Update holder count and volume (called by oracle)"
+      ],
+      "discriminator": [
+        102,
+        47,
+        141,
+        221,
+        158,
+        86,
+        58,
+        24
+      ],
+      "accounts": [
+        {
+          "name": "bonding_curve",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  99,
+                  117,
+                  114,
+                  118,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "oracle_authority",
+          "signer": true,
+          "relations": [
+            "bonding_curve"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "holder_count",
+          "type": "u64"
+        },
+        {
+          "name": "holder_timestamp",
+          "type": "i64"
+        },
+        {
+          "name": "volume_to_add_cents",
+          "type": "u64"
+        },
+        {
+          "name": "volume_timestamp",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "buy",
+      "docs": [
+        "Buy function with first buyer detection and locking"
+      ],
+      "discriminator": [
+        102,
+        6,
+        61,
+        18,
+        1,
+        218,
+        235,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "bonding_curve",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  99,
+                  117,
+                  114,
+                  118,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "buyer_token_account",
+          "writable": true
+        },
+        {
+          "name": "bonding_curve_token_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "first_buyer_lock_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  105,
+                  114,
+                  115,
+                  116,
+                  95,
+                  98,
+                  117,
+                  121,
+                  101,
+                  114,
+                  95,
+                  108,
+                  111,
+                  99,
+                  107,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bonding_curve_sol_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  111,
+                  108,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "sol_amount",
+          "type": "u64"
+        },
+        {
+          "name": "min_tokens_out",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "check_unlock_conditions",
+      "docs": [
+        "Check if unlock conditions are met"
+      ],
+      "discriminator": [
+        104,
+        249,
+        33,
+        140,
+        131,
+        164,
+        187,
+        94
+      ],
+      "accounts": [
+        {
+          "name": "bonding_curve",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  99,
+                  117,
+                  114,
+                  118,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_bonding_curve",
+      "docs": [
+        "Initialize bonding curve with first buyer lock mechanism"
+      ],
+      "discriminator": [
+        140,
+        201,
+        166,
+        55,
+        224,
+        232,
+        206,
+        114
+      ],
+      "accounts": [
+        {
+          "name": "bonding_curve",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  99,
+                  117,
+                  114,
+                  118,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "first_buyer_lock_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  105,
+                  114,
+                  115,
+                  116,
+                  95,
+                  98,
+                  117,
+                  121,
+                  101,
+                  114,
+                  95,
+                  108,
+                  111,
+                  99,
+                  107,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "sol_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  111,
+                  108,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "oracle_authority"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "initial_virtual_token_reserves",
+          "type": "u64"
+        },
+        {
+          "name": "initial_virtual_sol_reserves",
+          "type": "u64"
+        },
+        {
+          "name": "migration_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "total_supply",
+          "type": "u64"
+        },
+        {
+          "name": "holder_threshold",
+          "type": "u64"
+        },
+        {
+          "name": "volume_threshold_usd_cents",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "migrate_to_raydium",
+      "discriminator": [
+        116,
+        139,
+        75,
+        192,
+        86,
+        63,
+        121,
+        169
+      ],
+      "accounts": [
+        {
+          "name": "bonding_curve",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  99,
+                  117,
+                  114,
+                  118,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "platform_authority",
+          "writable": true
+        },
+        {
+          "name": "bonding_curve_sol_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  111,
+                  108,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "sell",
+      "discriminator": [
+        51,
+        230,
+        133,
+        164,
+        1,
+        127,
+        131,
+        173
+      ],
+      "accounts": [
+        {
+          "name": "bonding_curve",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  99,
+                  117,
+                  114,
+                  118,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "buyer_token_account",
+          "writable": true
+        },
+        {
+          "name": "bonding_curve_token_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "first_buyer_lock_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  105,
+                  114,
+                  115,
+                  116,
+                  95,
+                  98,
+                  117,
+                  121,
+                  101,
+                  114,
+                  95,
+                  108,
+                  111,
+                  99,
+                  107,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bonding_curve_sol_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  111,
+                  108,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "token_amount",
+          "type": "u64"
+        },
+        {
+          "name": "min_sol_out",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "unlock_first_buyer_tokens",
+      "docs": [
+        "Unlock and release first buyer's locked tokens"
+      ],
+      "discriminator": [
+        123,
+        147,
+        234,
+        28,
+        72,
+        46,
+        5,
+        188
+      ],
+      "accounts": [
+        {
+          "name": "bonding_curve",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  99,
+                  117,
+                  114,
+                  118,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "first_buyer_lock_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  105,
+                  114,
+                  115,
+                  116,
+                  95,
+                  98,
+                  117,
+                  121,
+                  101,
+                  114,
+                  95,
+                  108,
+                  111,
+                  99,
+                  107,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "first_buyer_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "first_buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "withdraw_for_pool",
+      "discriminator": [
+        20,
+        195,
+        51,
+        112,
+        9,
+        154,
+        128,
+        78
+      ],
+      "accounts": [
+        {
+          "name": "bonding_curve",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  99,
+                  117,
+                  114,
+                  118,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bonding_curve_token_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bonding_curve_sol_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  111,
+                  108,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bonding_curve.token_mint",
+                "account": "BondingCurve"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "destination",
+          "writable": true
+        },
+        {
+          "name": "destination_token_account",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "BondingCurve",
+      "discriminator": [
+        23,
+        183,
+        248,
+        55,
+        96,
+        216,
+        172,
+        96
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "FirstBuyerLocked",
+      "discriminator": [
+        184,
+        113,
+        138,
+        188,
+        92,
+        191,
+        102,
+        76
+      ]
+    },
+    {
+      "name": "FirstBuyerUnlocked",
+      "discriminator": [
+        45,
+        181,
+        16,
+        163,
+        218,
+        171,
+        150,
+        64
+      ]
+    },
+    {
+      "name": "MigrationCompleted",
+      "discriminator": [
+        223,
+        45,
+        123,
+        192,
+        106,
+        249,
+        6,
+        241
+      ]
+    },
+    {
+      "name": "MigrationThresholdReached",
+      "discriminator": [
+        67,
+        213,
+        78,
+        172,
+        60,
+        218,
+        10,
+        109
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "AlreadyMigrated",
+      "msg": "Bonding curve has already migrated to Raydium"
+    },
+    {
+      "code": 6001,
+      "name": "SlippageExceeded",
+      "msg": "Slippage tolerance exceeded"
+    },
+    {
+      "code": 6002,
+      "name": "ThresholdNotReached",
+      "msg": "Migration threshold not reached"
+    },
+    {
+      "code": 6003,
+      "name": "MathOverflow",
+      "msg": "Math overflow"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidMintAuthority",
+      "msg": "Invalid mint authority"
+    },
+    {
+      "code": 6005,
+      "name": "InsufficientLiquidity",
+      "msg": "Insufficient liquidity in reserves"
+    },
+    {
+      "code": 6006,
+      "name": "NotMigrated",
+      "msg": "Not yet migrated"
+    },
+    {
+      "code": 6007,
+      "name": "AlreadyWithdrawn",
+      "msg": "Already withdrawn"
+    },
+    {
+      "code": 6008,
+      "name": "TokensAreLocked",
+      "msg": "Tokens are locked - cannot sell yet"
+    },
+    {
+      "code": 6009,
+      "name": "NoActiveLock",
+      "msg": "No active lock to update"
+    },
+    {
+      "code": 6010,
+      "name": "ConditionsNotMet",
+      "msg": "Unlock conditions not met"
+    },
+    {
+      "code": 6011,
+      "name": "UnauthorizedUnlock",
+      "msg": "Unauthorized unlock attempt"
+    }
+  ],
+  "types": [
+    {
+      "name": "BondingCurve",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "virtual_token_reserves",
+            "type": "u64"
+          },
+          {
+            "name": "virtual_sol_reserves",
+            "type": "u64"
+          },
+          {
+            "name": "real_token_reserves",
+            "type": "u64"
+          },
+          {
+            "name": "real_sol_reserves",
+            "type": "u64"
+          },
+          {
+            "name": "total_supply",
+            "type": "u64"
+          },
+          {
+            "name": "migration_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "is_migrated",
+            "type": "bool"
+          },
+          {
+            "name": "migration_sol",
+            "type": "u64"
+          },
+          {
+            "name": "migration_tokens",
+            "type": "u64"
+          },
+          {
+            "name": "first_buyer",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "first_buyer_locked_amount",
+            "type": "u64"
+          },
+          {
+            "name": "first_buyer_lock_active",
+            "type": "bool"
+          },
+          {
+            "name": "holder_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "volume_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "current_holder_count",
+            "type": "u64"
+          },
+          {
+            "name": "total_volume_usd",
+            "type": "u64"
+          },
+          {
+            "name": "last_holder_update",
+            "type": "i64"
+          },
+          {
+            "name": "last_volume_update",
+            "type": "i64"
+          },
+          {
+            "name": "unlockable",
+            "type": "bool"
+          },
+          {
+            "name": "oracle_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_vault_bump",
+            "type": "u8"
+          },
+          {
+            "name": "sol_vault_bump",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FirstBuyerLocked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "sol_spent",
+            "type": "u64"
+          },
+          {
+            "name": "holder_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "volume_threshold",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FirstBuyerUnlocked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MigrationCompleted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "liquidity_sol",
+            "type": "u64"
+          },
+          {
+            "name": "liquidity_tokens",
+            "type": "u64"
+          },
+          {
+            "name": "platform_fee",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MigrationThresholdReached",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "sol_reserves",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    }
+  ]
+}
